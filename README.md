@@ -8,7 +8,7 @@ Bem-vindo ao **Python Apps**! Este repositório é uma coletânea de aplicaçõe
 
 | Aplicação | Descrição | Tecnologias |
 | :--- | :--- | :--- |
-| [📄 PDF Cleaner](./pdf-cleaner) | Utilitário cirúrgico para remoção de marcas d'água e licenças em PDFs via visão computacional e manipulação de streams. | Python 3.12, PyMuPDF, Regex |
+| [📄 PDF Cleaner](./PDF Cleaner) | Utilitário cirúrgico para remoção de marcas d'água e licenças em PDFs via visão computacional e manipulação de streams. | Python 3.12, PyMuPDF, Regex |
 
 ---
 
