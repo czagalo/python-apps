@@ -12,8 +12,3 @@ Bem-vindo ao **Python Apps**! Este repositório é uma coletânea de aplicaçõe
 
 ---
 
-## 🚀 Como Utilizar
-
-1. Clone este repositório:
-   ```bash
-   git clone [https://github.com/SEU-USUARIO/python-apps.git](https://github.com/SEU-USUARIO/python-apps.git)
