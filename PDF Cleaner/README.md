@@ -1,39 +1,55 @@
 # 📄 PDF Cleaner
 
-O **PDF Cleaner** é um utilitário em Python projetado para remover marcas d'água, licenças e assinaturas personalizadas de arquivos PDF de forma cirúrgica, preservando 100% da integridade do texto original, fontes e imagens de fundo.
+O **PDF Cleaner** é uma ferramenta em Python criada para remover marcas d'água, licenças e assinaturas personalizadas de arquivos PDF de forma cirúrgica, preservando 100% da integridade do texto original, da formatação e dos gráficos de fundo.
 
-Diferente de métodos tradicionais de substituição bruta, o PDF Cleaner utiliza uma **arquitetura de execução em cascata** alimentada por um **loop de feedback de visão computacional/layout**, garantindo que apenas a camada da marca d'água seja removida, evitando falsos positivos que tornam o conteúdo do documento invisível.
+Diferente de ferramentas convencionais que aplicam tarjas ou cortes brutos, o PDF Cleaner utiliza uma **arquitetura de execução em cascata** guiada por um **loop de verificação visual em tempo real**. Isso garante que apenas os resíduos da marca d'água sejam removidos, sem apagar o conteúdo legítimo do documento.
 
 ---
 
 ## 💡 Como Funciona
 
-A aplicação executa um fluxo inteligente de 6 etapas por página, operando em modo de parada imediata assim que a limpeza é confirmada:
+A aplicação utiliza uma estratégia inteligente dividida em duas fases: **Preparação Dinâmica** e **Pipeline de Limpeza em Cascata (4 Tentativas)**.
 
-1. **Mapeamento e Detecção de Posição ($Y$):**
-   A aplicação analisa a página em busca do `texto_alvo` (ou de palavras-chave derivadas dele, com tolerância a variações de acentuação, espaços e codificações de fonte). Ela mapeia a coordenada exata de altura ($Y$) onde a marca d'água reside na página.
+### 📍 Fase 1: Mapeamento e Análise Dinâmica
+1. **Mapeamento de Coordenadas ($Y$):** O script localiza o texto-alvo na página e identifica a altura exata ($Y$) onde a marca d'água está impressa.
+2. **Gerador Contextual de Padrões:** A partir do texto-alvo e da linha lida na página, a aplicação gera dinamicamente várias combinações de palavras (N-Grams) e variações sem acento. Isso permite limpar licenças em português, inglês ou qualquer outro idioma de forma automática.
 
-2. **Captura Dinâmica de Idioma e Estrutura:**
-   Com base na coordenada $Y$ identificada, o sistema lê a linha do PDF para capturar dinamicamente a frase completa impressa. Essa etapa permite limpar automaticamente variações da licença em português (*"Licenciado para..."*), inglês (*"Licensed to..."*) ou qualquer outro idioma, sem a necessidade de alterar as configurações do script.
+---
 
-3. **Limpeza Primária no Stream (ASCII):**
-   Acontece a primeira tentativa de remoção direta no código-fonte bruto do PDF (*Content Stream*), substituindo os caracteres do texto por espaços em branco para manter a estrutura e a contagem de bytes do arquivo intactas.
+### 🔄 Fase 2: Pipeline de Limpeza em Cascata
 
-4. **Inspeção por Visão Computacional (Feedback Loop):**
-   A aplicação renderiza e analisa em tempo real apenas a faixa de altura $Y$ mapeada no Passo 1, verificando se restaram resíduos visíveis (como parênteses soltos, glifos de fontes customizadas ou pontuações órfãs).
-   - **Se a faixa estiver 100% limpa:** O processo para imediatamente para aquela página, salvando o documento e protegendo o conteúdo do livro.
-   - **Se detectar resíduos:** A aplicação aciona automaticamente a próxima camada da cascata.
+A página passa por até **4 tentativas de limpeza**. Após cada tentativa, um inspetor de **Visão Computacional** lê exclusivamente a faixa $Y$ do rodapé/topo. Se a faixa estiver 100% limpa, o script interrompe o processo naquela página e salva o arquivo, protegendo o restante do livro.
 
-5. **Tratamento de Glifos e Injeção de Transparência `3 Tr` (Fallback 1):**
-   Trata os resíduos como glifos mapeados por fontes internas e injeta a instrução de renderização invisível (`3 Tr ... 0 Tr`) exclusivamente nos operadores daquela faixa $Y$. A visão computacional inspeciona a linha novamente; se limpa, encerra o processamento da página.
+```text
+[Mapeamento Y] ➔ [Tentativa 1] ➔ Limpo? ➔ (Fim da Página)
+│ (Não)
+[Tentativa 2] ➔ Limpo? ➔ (Fim da Página)
+│ (Não)
+[Tentativa 3] ➔ Limpo? ➔ (Fim da Página)
+│ (Não)
+[Tentativa 4] ➔ Limpo? ➔ (Fim da Página)
+```
 
-6. **Redação Vetorial de Precisão (Fallback Final):**
-   Se o resíduo persistir (caracteres desenhados como curvas/vetores *Line Art*), a aplicação aplica uma anotação de redação cirúrgica com opacidade neutra (`fill=None` e `images=0`), eliminando os traços vetoriais sem afetar elementos visuais ou ilustrações de fundo do documento.
+#### 🛡️ As 4 Camadas de Remoção:
+
+* **Tentativa 1: Substituição Direta no Stream (Preservação de Bytes)**
+  Substitui os padrões de texto da licença por espaços em branco no código bruto do PDF (*Content Stream*). Mantém o tamanho exato do arquivo sem corromper a estrutura.
+
+* **Tentativa 2: Modo de Renderização Invisível (`3 Tr`)**
+  Caso o texto persista por conta de codificações especiais de fonte, a aplicação injeta instruções sintáticas do PDF para tornar a renderização daqueles caracteres invisível (`3 Tr`), sem afetar a linha ao redor.
+
+* **Tentativa 3: Varredura em Formulários e Objetos Aninhados (XObjects)**
+  Procura e limpa os padrões da licença em sub-streams e recursos gráficos compartilhados (*XObjects/Forms*), cobrindo marcas d'água inseridas como modelos externos.
+
+* **Tentativa 4: Remoção de Símbolos e Parênteses Escapados (`\(` e `\)`)**
+  Para casos difíceis em que a licença usa parênteses no e-mail ou símbolos de escape do PDF. Quando a Tentativa 1 limpa o e-mail, restam parênteses isolados em meio a espaços vazios. A Tentativa 4 identifica cirurgicamente esses parênteses órfãos cercados por espaços e os anula, eliminando os resíduos finais sem tocar nos parênteses do texto do livro.
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Python 3.12+**
-- **PyMuPDF (`fitz`)**: Manipulação de streams de PDF, parsing de layout e motor de renderização visual.
-- **Regex (`re`)**: Análise e manipulação cirúrgica de instruções PostScript no *Content Stream*.
+- **PyMuPDF (`fitz`)**: Extração de layout, parsing de streams e motor de inspeção visual.
+- **Regex (`re`)**: Manipulação e análise cirúrgica das instruções de texto no *Content Stream*.
+
+---
